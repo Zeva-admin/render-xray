@@ -1,0 +1,579 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cocut VPN — Личный кабинет</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <style>
+        :root {
+            --bg: #0f172a;
+            --card: #1e293b;
+            --card2: #162032;
+            --border: #2d3f57;
+            --text: #f1f5f9;
+            --muted: #7a93b0;
+            --primary: #3b82f6;
+            --primary-h: #2563eb;
+            --success: #10b981;
+            --warn: #f59e0b;
+            --error: #ef4444;
+            --r: 14px;
+        }
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            min-height: 100vh;
+            padding: 20px 16px 40px;
+        }
+        .wrap { max-width: 780px; margin: 0 auto; }
+
+        /* ── HEADER ── */
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 28px;
+        }
+        .logo {
+            font-size: 22px;
+            font-weight: 800;
+            letter-spacing: -.5px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--text);
+        }
+        .logo svg { flex-shrink: 0; }
+        .badge {
+            display: flex;
+            align-items: center;
+            gap: 7px;
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            padding: 5px 13px;
+            font-size: 13px;
+            font-weight: 500;
+        }
+        .dot {
+            width: 8px; height: 8px;
+            border-radius: 50%;
+            background: var(--success);
+            flex-shrink: 0;
+        }
+        .dot.pulse { animation: pulse 2s infinite; }
+        .dot.offline { background: var(--error); animation: none; }
+        @keyframes pulse {
+            0%   { box-shadow: 0 0 0 0 rgba(16,185,129,.5); }
+            70%  { box-shadow: 0 0 0 7px rgba(16,185,129,0); }
+            100% { box-shadow: 0 0 0 0 rgba(16,185,129,0); }
+        }
+
+        /* ── CARD ── */
+        .card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: var(--r);
+            padding: 22px 20px;
+            margin-bottom: 16px;
+        }
+        .card-title {
+            font-size: 13px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: .6px;
+            color: var(--muted);
+            margin-bottom: 16px;
+        }
+
+        /* ── SUBSCRIPTION GRID ── */
+        .sub-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 18px;
+        }
+        @media(max-width: 480px) { .sub-grid { grid-template-columns: 1fr; } }
+        .sub-item { display: flex; flex-direction: column; gap: 7px; }
+        .sub-label {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            font-size: 13px;
+            color: var(--muted);
+        }
+        .sub-val {
+            font-size: 22px;
+            font-weight: 700;
+            color: var(--text);
+            min-height: 28px;
+        }
+        .bar-bg {
+            height: 7px;
+            background: var(--border);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        .bar-fill {
+            height: 100%;
+            width: 0;
+            border-radius: 4px;
+            background: var(--primary);
+            transition: width .6s ease;
+        }
+        .bar-fill.warn { background: var(--warn); }
+        .bar-fill.danger { background: var(--error); }
+
+        /* ── SERVER CARD ── */
+        .server-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 16px;
+        }
+        .server-col { display: flex; flex-direction: column; gap: 4px; }
+        .server-col .lbl { font-size: 12px; color: var(--muted); }
+        .server-col .val { font-size: 17px; font-weight: 600; }
+        .ping-val { font-family: monospace; font-size: 18px; font-weight: 700; color: var(--success); }
+
+        /* ── CONNECT CARD ── */
+        .connect-inner {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 18px;
+        }
+        #qrcode {
+            background: #fff;
+            padding: 12px;
+            border-radius: 10px;
+            display: inline-block;
+        }
+        .sub-link-box {
+            width: 100%;
+            background: var(--card2);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 10px 14px;
+            font-size: 13px;
+            color: var(--muted);
+            word-break: break-all;
+            font-family: monospace;
+        }
+        .btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            width: 100%;
+            max-width: 320px;
+            padding: 13px 20px;
+            background: var(--primary);
+            color: #fff;
+            border: none;
+            border-radius: 10px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background .15s, transform .1s;
+        }
+        .btn:hover { background: var(--primary-h); }
+        .btn:active { transform: scale(.98); }
+        .btn.copied { background: var(--success); }
+
+        /* ── TABS ── */
+        .tabs {
+            display: flex;
+            gap: 4px;
+            border-bottom: 1px solid var(--border);
+            margin-bottom: 16px;
+            overflow-x: auto;
+            scrollbar-width: none;
+        }
+        .tabs::-webkit-scrollbar { display: none; }
+        .tab {
+            padding: 9px 14px;
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--muted);
+            background: none;
+            border: none;
+            border-bottom: 2px solid transparent;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: color .15s;
+        }
+        .tab.active { color: var(--primary); border-bottom-color: var(--primary); }
+        .tab-pane { display: none; }
+        .tab-pane.active { display: block; animation: fadeIn .2s; }
+        @keyframes fadeIn { from { opacity:0; } to { opacity:1; } }
+        .steps { list-style: none; counter-reset: s; }
+        .steps li {
+            counter-increment: s;
+            position: relative;
+            padding-left: 38px;
+            margin-bottom: 14px;
+            font-size: 14px;
+            color: #cbd5e1;
+            line-height: 1.55;
+        }
+        .steps li::before {
+            content: counter(s);
+            position: absolute;
+            left: 0; top: 0;
+            width: 24px; height: 24px;
+            background: var(--border);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 11px;
+            font-weight: 700;
+            color: var(--text);
+        }
+        .steps b { color: #fff; }
+
+        /* ── SKELETON ── */
+        .sk {
+            background: var(--border);
+            color: transparent !important;
+            border-radius: 5px;
+            animation: skAnim 1.4s infinite;
+            user-select: none;
+            display: inline-block;
+        }
+        .sk * { visibility: hidden; }
+        @keyframes skAnim {
+            0%,100% { opacity: 1; }
+            50%      { opacity: .5; }
+        }
+
+        /* ── FOOTER ── */
+        footer {
+            text-align: center;
+            color: var(--muted);
+            font-size: 13px;
+            margin-top: 28px;
+        }
+        footer a { color: var(--primary); text-decoration: none; }
+        footer a:hover { text-decoration: underline; }
+    </style>
+</head>
+<body>
+<div class="wrap">
+
+    <header>
+        <div class="logo">
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none"
+                 stroke="var(--primary)" stroke-width="2.5"
+                 stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+            </svg>
+            Cocut
+        </div>
+        <div class="badge">
+            <div class="dot pulse" id="status-dot"></div>
+            <span id="status-text">Проверка…</span>
+        </div>
+    </header>
+
+    <!-- Подписка -->
+    <div class="card">
+        <div class="card-title">Подписка</div>
+        <div class="sub-grid">
+            <div class="sub-item">
+                <div class="sub-label">
+                    <span>Осталось дней</span>
+                    <span id="date-end" class="sk">до --.--.----</span>
+                </div>
+                <div class="sub-val sk" id="days-left" style="width:90px">-- д</div>
+                <div class="bar-bg"><div class="bar-fill" id="days-bar"></div></div>
+            </div>
+            <div class="sub-item">
+                <div class="sub-label">
+                    <span>Трафик использовано / всего</span>
+                    <span id="traffic-text" class="sk">-- / -- ГБ</span>
+                </div>
+                <div class="sub-val sk" id="traffic-left" style="width:110px">-- ГБ</div>
+                <div class="bar-bg"><div class="bar-fill" id="traffic-bar"></div></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Сервер -->
+    <div class="card">
+        <div class="card-title">Текущий сервер</div>
+        <div class="server-row">
+            <div class="server-col">
+                <span class="lbl">Локация</span>
+                <span class="val" id="server-location">🇺🇸 США (Railway)</span>
+            </div>
+            <div class="server-col">
+                <span class="lbl">Протокол</span>
+                <span class="val">VLESS + WS + TLS</span>
+            </div>
+            <div class="server-col">
+                <span class="lbl">Статус сервера</span>
+                <span class="val" id="server-status">—</span>
+            </div>
+            <div class="server-col">
+                <span class="lbl">Пинг</span>
+                <span class="ping-val sk" id="ping-text" style="width:60px">--- ms</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- QR + кнопка -->
+    <div class="card">
+        <div class="card-title">Подключение</div>
+        <div class="connect-inner">
+            <div id="qrcode"></div>
+            <div class="sub-link-box" id="sub-link-box">Загрузка…</div>
+            <button class="btn" id="copy-btn">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
+                     stroke="currentColor" stroke-width="2">
+                    <rect x="9" y="9" width="13" height="13" rx="2"/>
+                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+                </svg>
+                Скопировать ссылку подписки
+            </button>
+        </div>
+    </div>
+
+    <!-- Инструкция -->
+    <div class="card">
+        <div class="card-title">Инструкция по подключению</div>
+        <div class="tabs">
+            <button class="tab active" data-tab="android">Android</button>
+            <button class="tab" data-tab="ios">iOS</button>
+            <button class="tab" data-tab="win">Windows</button>
+            <button class="tab" data-tab="mac">macOS</button>
+        </div>
+
+        <div class="tab-pane active" id="tab-android">
+            <ul class="steps">
+                <li>Установите <b>v2rayNG</b> из Google Play.</li>
+                <li>Скопируйте ссылку подписки кнопкой выше.</li>
+                <li>В приложении: меню → «Группы подписок» → «+» → вставьте ссылку → Сохранить.</li>
+                <li>Три точки → «Обновить подписку», выберите сервер Cocut, нажмите ▶.</li>
+            </ul>
+        </div>
+        <div class="tab-pane" id="tab-ios">
+            <ul class="steps">
+                <li>Установите <b>FoXray</b> или <b>V2Box</b> из App Store.</li>
+                <li>Скопируйте ссылку подписки кнопкой выше.</li>
+                <li>В приложении: Subscriptions → «+» → Import from URL → вставьте ссылку.</li>
+                <li>Обновите конфигурацию, выберите сервер Cocut и нажмите «Connect».</li>
+            </ul>
+        </div>
+        <div class="tab-pane" id="tab-win">
+            <ul class="steps">
+                <li>Скачайте <b>Hiddify</b> или <b>v2rayN</b> с GitHub.</li>
+                <li>Скопируйте ссылку подписки кнопкой выше.</li>
+                <li>В приложении: Подписка → Настройки подписки → Добавить → вставьте URL.</li>
+                <li>Обновите (Ctrl+F), выберите сервер Cocut и нажмите Enter.</li>
+            </ul>
+        </div>
+        <div class="tab-pane" id="tab-mac">
+            <ul class="steps">
+                <li>Установите <b>Hiddify</b> или <b>V2Box</b> для macOS.</li>
+                <li>Скопируйте ссылку подписки кнопкой выше.</li>
+                <li>Добавить подписку → вставьте URL → Сохранить.</li>
+                <li>Обновите список серверов, выберите Cocut и включите VPN.</li>
+            </ul>
+        </div>
+    </div>
+
+    <footer>
+        Нужна помощь? <a href="https://t.me/your_support" target="_blank">Поддержка в Telegram</a>
+        &nbsp;·&nbsp; Cocut v1.0
+    </footer>
+
+</div>
+
+<script>
+    const SUB_URL = window.location.origin + '/sub';
+    const HEALTH_URL = window.location.origin + '/health';
+    const INFO_URL = window.location.origin + '/info';
+
+    /* ── helpers ── */
+    function fmt(bytes) {
+        return (bytes / (1024 ** 3)).toFixed(2);
+    }
+    function unsk(el) {
+        if (el) el.classList.remove('sk');
+    }
+
+    /* ── QR ── */
+    new QRCode(document.getElementById('qrcode'), {
+        text: SUB_URL,
+        width: 160, height: 160,
+        colorDark: '#0f172a',
+        colorLight: '#ffffff',
+        correctLevel: QRCode.CorrectLevel.M
+    });
+
+    /* ── sub link box ── */
+    document.getElementById('sub-link-box').textContent = SUB_URL;
+
+    /* ── copy button ── */
+    const copyBtn = document.getElementById('copy-btn');
+    copyBtn.addEventListener('click', async () => {
+        try {
+            await navigator.clipboard.writeText(SUB_URL);
+        } catch {
+            // fallback для старых браузеров
+            const ta = document.createElement('textarea');
+            ta.value = SUB_URL;
+            document.body.appendChild(ta);
+            ta.select();
+            document.execCommand('copy');
+            document.body.removeChild(ta);
+        }
+        const orig = copyBtn.innerHTML;
+        copyBtn.classList.add('copied');
+        copyBtn.innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> Скопировано!`;
+        setTimeout(() => {
+            copyBtn.classList.remove('copied');
+            copyBtn.innerHTML = orig;
+        }, 2200);
+    });
+
+    /* ── tabs ── */
+    document.querySelectorAll('.tab').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('.tab').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+            btn.classList.add('active');
+            document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
+        });
+    });
+
+    /* ── ping / status ── */
+    async function measurePing() {
+        const dot  = document.getElementById('status-dot');
+        const stxt = document.getElementById('status-text');
+        const ptxt = document.getElementById('ping-text');
+        const srvStatus = document.getElementById('server-status');
+        try {
+            const t0 = performance.now();
+            const res = await fetch(HEALTH_URL, { method: 'HEAD', cache: 'no-store' });
+            const ms = Math.round(performance.now() - t0);
+            if (!res.ok) throw new Error();
+
+            unsk(ptxt);
+            ptxt.textContent = ms + ' ms';
+            ptxt.style.color = ms < 150 ? 'var(--success)' : ms < 300 ? 'var(--warn)' : 'var(--error)';
+
+            dot.className = 'dot pulse';
+            stxt.textContent = 'Онлайн';
+            srvStatus.textContent = '✅ Работает';
+            srvStatus.style.color = 'var(--success)';
+        } catch {
+            unsk(ptxt);
+            ptxt.textContent = 'Ошибка';
+            ptxt.style.color = 'var(--error)';
+            dot.className = 'dot offline';
+            stxt.textContent = 'Недоступен';
+            srvStatus.textContent = '❌ Недоступен';
+            srvStatus.style.color = 'var(--error)';
+        }
+    }
+
+    /* ── subscription info ── */
+    async function fetchSub() {
+        const els = {
+            daysLeft:     document.getElementById('days-left'),
+            dateEnd:      document.getElementById('date-end'),
+            daysBar:      document.getElementById('days-bar'),
+            trafficText:  document.getElementById('traffic-text'),
+            trafficLeft:  document.getElementById('traffic-left'),
+            trafficBar:   document.getElementById('traffic-bar'),
+        };
+
+        try {
+            const res = await fetch('/sub', { method: 'HEAD' });
+            const hdr = res.headers.get('subscription-userinfo');
+            if (!hdr) throw new Error('no header');
+
+            const info = {};
+            hdr.split(';').forEach(p => {
+                const [k, v] = p.trim().split('=');
+                if (k && v !== undefined) info[k.trim()] = parseInt(v.trim(), 10);
+            });
+
+            // Трафик
+            const used  = (info.upload || 0) + (info.download || 0);
+            const total = info.total || 107374182400; // 100 GB fallback
+            const usedGB  = fmt(used);
+            const totalGB = fmt(total);
+            const leftGB  = fmt(Math.max(0, total - used));
+            const pct = Math.min((used / total) * 100, 100);
+
+            unsk(els.trafficText);
+            unsk(els.trafficLeft);
+            els.trafficText.textContent = `${usedGB} / ${totalGB} ГБ`;
+            els.trafficLeft.textContent = `${leftGB} ГБ осталось`;
+            els.trafficBar.style.width  = pct + '%';
+            if (pct > 90) els.trafficBar.classList.add('danger');
+            else if (pct > 70) els.trafficBar.classList.add('warn');
+
+            // Дни
+            if (info.expire && info.expire > 0) {
+                const endDate = new Date(info.expire * 1000);
+                const daysLeft = Math.max(0, Math.ceil((endDate - Date.now()) / 86400000));
+                const totalDays = 30;
+                const daysPct = Math.min(((totalDays - daysLeft) / totalDays) * 100, 100);
+
+                unsk(els.daysLeft);
+                unsk(els.dateEnd);
+                els.daysLeft.textContent = daysLeft + ' дней';
+                els.dateEnd.textContent  = 'до ' + endDate.toLocaleDateString('ru-RU');
+                els.daysBar.style.width  = daysPct + '%';
+                if (daysLeft < 3) els.daysBar.classList.add('danger');
+                else if (daysLeft < 7) els.daysBar.classList.add('warn');
+            } else {
+                // expire=0 → безлимитная подписка
+                unsk(els.daysLeft);
+                unsk(els.dateEnd);
+                els.daysLeft.textContent = '∞ дней';
+                els.dateEnd.textContent  = 'Безлимитно';
+                els.daysBar.style.width  = '0%';
+            }
+
+        } catch (e) {
+            // Если /sub недоступен — показываем что данные недоступны (без демо)
+            Object.values(els).forEach(el => {
+                if (el && el.classList) unsk(el);
+            });
+            els.daysLeft.textContent     = 'Нет данных';
+            els.dateEnd.textContent      = '—';
+            els.trafficText.textContent  = 'Нет данных';
+            els.trafficLeft.textContent  = '—';
+        }
+    }
+
+    /* ── server location from /info ── */
+    async function fetchInfo() {
+        try {
+            const res = await fetch(INFO_URL);
+            const data = await res.json();
+            if (data.domain) {
+                const loc = document.getElementById('server-location');
+                // Railway регион US West → Калифорния
+                loc.textContent = '🇺🇸 США · ' + data.domain;
+            }
+        } catch { /* не критично */ }
+    }
+
+    /* ── init ── */
+    fetchSub();
+    fetchInfo();
+    measurePing();
+    setInterval(measurePing, 15000);
+</script>
+</body>
+</html>
