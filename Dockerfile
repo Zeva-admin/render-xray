@@ -18,6 +18,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY app.py .
 COPY xray_config.json .
 COPY start.sh .
+COPY index.html .
 RUN chmod +x start.sh
 
 EXPOSE 5000
