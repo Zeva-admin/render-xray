@@ -3,9 +3,11 @@ FROM python:3.11-slim
 WORKDIR /app
 
 # Системные зависимости
+# libev-dev нужен для gevent (WebSocket worker)
 RUN apt-get update && apt-get install -y \
     curl \
     unzip \
+    libev-dev \
     && rm -rf /var/lib/apt/lists/*
 
 # Python зависимости
