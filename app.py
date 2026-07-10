@@ -8,7 +8,7 @@ import time
 import logging
 import socket
 
-from flask import Flask, Response, request
+from flask import Flask, Response, request, send_file
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -252,6 +252,11 @@ def info():
 
 @app.route("/", methods=["GET"])
 def index():
+    # Отдаём красивый личный кабинет
+    html_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "index.html")
+    if os.path.exists(html_path):
+        return send_file(html_path, mimetype="text/html")
+    # Fallback если файл не найден
     return Response(
         json.dumps({"status": "ok", "service": "Cocut"}),
         200,
