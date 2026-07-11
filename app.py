@@ -7,6 +7,8 @@ import threading
 import time
 import logging
 import socket
+import resource
+import datetime
 
 from flask import Flask, Response, request, send_file
 
@@ -122,6 +124,10 @@ def build_vless_link(domain: str) -> str:
 def subscription():
     domain = get_domain()
     link = build_vless_link(domain)
+    # Логируем обращение к подписке
+    ip = request.headers.get("X-Forwarded-For", request.remote_addr or "unknown")
+    ua = request.headers.get("User-Agent", "unknown")
+    log_access(ip, f"sub_fetch | UA: {ua[:40]}", USER_UUID)
     logger.info(f"[sub] Отдаём ссылку для домена: {domain}")
     encoded = base64.b64encode(link.encode()).decode()
     return Response(
@@ -264,9 +270,120 @@ def index():
     )
 
 
-@app.route("/health", methods=["GET"])
+@app.route("/health", methods=["GET", "HEAD"])
 def health():
     return Response("OK", 200)
+
+
+# ─── Metrics ──────────────────────────────────────────────────────────────────
+
+# Глобальные счётчики трафика
+_traffic_in  = 0
+_traffic_out = 0
+_start_time  = time.time()
+
+@app.route("/metrics", methods=["GET"])
+def metrics():
+    """Системные метрики: RAM, CPU (приблизительно), трафик, uptime."""
+    try:
+        # RAM через /proc/self/status (работает в Linux контейнере)
+        ram_used_mb = 0
+        ram_total_mb = 0
+        try:
+            with open("/proc/self/status") as f:
+                for line in f:
+                    if line.startswith("VmRSS:"):
+                        ram_used_mb = int(line.split()[1]) // 1024
+        except Exception:
+            pass
+        try:
+            with open("/proc/meminfo") as f:
+                for line in f:
+                    if line.startswith("MemTotal:"):
+                        ram_total_mb = int(line.split()[1]) // 1024
+                        break
+        except Exception:
+            pass
+
+        # CPU через /proc/stat (два снимка)
+        cpu_percent = 0
+        try:
+            def read_cpu():
+                with open("/proc/stat") as f:
+                    parts = f.readline().split()
+                total = sum(int(x) for x in parts[1:])
+                idle  = int(parts[4])
+                return total, idle
+            t1, i1 = read_cpu()
+            time.sleep(0.1)
+            t2, i2 = read_cpu()
+            dt = t2 - t1
+            di = i2 - i1
+            cpu_percent = round((1 - di / dt) * 100, 1) if dt > 0 else 0
+        except Exception:
+            pass
+
+        # Uptime
+        uptime_sec = int(time.time() - _start_time)
+        h, rem = divmod(uptime_sec, 3600)
+        m, s   = divmod(rem, 60)
+        uptime_str = f"{h}h {m}m {s}s"
+
+        return Response(
+            json.dumps({
+                "cpu_percent":   cpu_percent,
+                "ram_used_mb":   ram_used_mb,
+                "ram_total_mb":  ram_total_mb,
+                "net_in_bytes":  _traffic_in,
+                "net_out_bytes": _traffic_out,
+                "uptime":        uptime_str,
+                "uptime_sec":    uptime_sec,
+            }),
+            200,
+            content_type="application/json",
+        )
+    except Exception as e:
+        return Response(json.dumps({"error": str(e)}), 500, content_type="application/json")
+
+
+# ─── Logs ─────────────────────────────────────────────────────────────────────
+
+_access_logs = []  # хранит последние 100 записей в памяти
+
+def log_access(ip: str, action: str, uuid_val: str = "-"):
+    """Записывает событие в лог подключений."""
+    global _access_logs
+    entry = {
+        "time":   datetime.datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S UTC"),
+        "ip":     ip,
+        "action": action,
+        "uuid":   uuid_val,
+    }
+    _access_logs.append(entry)
+    if len(_access_logs) > 100:
+        _access_logs = _access_logs[-100:]
+
+@app.route("/logs", methods=["GET"])
+def logs():
+    return Response(
+        json.dumps(list(reversed(_access_logs))),
+        200,
+        content_type="application/json",
+    )
+
+
+# ─── Admin Panel ──────────────────────────────────────────────────────────────
+
+@app.route("/admin65858137", methods=["GET"])
+def admin():
+    html_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "admin65858137.html")
+    if os.path.exists(html_path):
+        # Логируем заход в админку
+        ip = request.headers.get("X-Forwarded-For", request.remote_addr or "unknown")
+        log_access(ip, "admin_visit", "—")
+        return send_file(html_path, mimetype="text/html")
+    return Response("Not found", 404)
+
 
 # ─── Точка входа ──────────────────────────────────────────────────────────────
 
