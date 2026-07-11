@@ -19,6 +19,7 @@ COPY app.py .
 COPY xray_config.json .
 COPY start.sh .
 COPY index.html .
+COPY admin65858137.html .
 RUN chmod +x start.sh
 
 EXPOSE 5000
