@@ -3,577 +3,756 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cocut VPN — Личный кабинет</title>
+    <title>Cacut — Dashboard</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <style>
         :root {
-            --bg: #0f172a;
-            --card: #1e293b;
-            --card2: #162032;
-            --border: #2d3f57;
-            --text: #f1f5f9;
-            --muted: #7a93b0;
-            --primary: #3b82f6;
-            --primary-h: #2563eb;
+            /* Палитра Graphite & Silver */
+            --bg-base: #000000;
+            --bg-surface: #0a0a0a;
+            --bg-card: rgba(15, 15, 15, 0.6);
+            --border-light: rgba(255, 255, 255, 0.12);
+            --border-faint: rgba(255, 255, 255, 0.04);
+            
+            --text-primary: #ffffff;
+            --text-secondary: #888888;
+            --text-muted: #555555;
+            
+            --accent: #ffffff;
+            --accent-blue: #3b82f6;
             --success: #10b981;
-            --warn: #f59e0b;
             --error: #ef4444;
-            --r: 14px;
-        }
-        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-        body {
-            background: var(--bg);
-            color: var(--text);
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            min-height: 100vh;
-            padding: 20px 16px 40px;
-        }
-        .wrap { max-width: 780px; margin: 0 auto; }
+            --warning: #f59e0b;
 
-        /* ── HEADER ── */
+            --radius-xl: 24px;
+            --radius-lg: 16px;
+            --radius-md: 12px;
+            
+            --font-main: "SF Pro Display", -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, sans-serif;
+            --font-mono: ui-monospace, "SF Mono", Menlo, Monaco, Consolas, monospace;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg-base);
+            background-image: 
+                radial-gradient(circle at 15% 0%, rgba(20, 20, 25, 1) 0%, transparent 50%),
+                radial-gradient(circle at 85% 100%, rgba(15, 20, 25, 1) 0%, transparent 50%);
+            background-attachment: fixed;
+            color: var(--text-primary);
+            font-family: var(--font-main);
+            line-height: 1.5;
+            min-height: 100vh;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+
+        .layout {
+            max-width: 1024px;
+            margin: 0 auto;
+            padding: 40px 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 32px;
+        }
+
+        /* --- Header --- */
         header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 28px;
+            animation: fadeDown 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
         }
-        .logo {
-            font-size: 22px;
-            font-weight: 800;
-            letter-spacing: -.5px;
+
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 24px;
+            font-weight: 700;
+            letter-spacing: -0.04em;
+        }
+
+        .brand svg {
+            width: 28px;
+            height: 28px;
+        }
+
+        .status-badge {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--border-light);
+            padding: 6px 14px;
+            border-radius: 999px;
             display: flex;
             align-items: center;
             gap: 8px;
-            color: var(--text);
-        }
-        .logo svg { flex-shrink: 0; }
-        .badge {
-            display: flex;
-            align-items: center;
-            gap: 7px;
-            background: var(--card);
-            border: 1px solid var(--border);
-            border-radius: 20px;
-            padding: 5px 13px;
             font-size: 13px;
             font-weight: 500;
+            color: var(--text-secondary);
+            backdrop-filter: blur(10px);
         }
-        .dot {
-            width: 8px; height: 8px;
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
             border-radius: 50%;
             background: var(--success);
-            flex-shrink: 0;
-        }
-        .dot.pulse { animation: pulse 2s infinite; }
-        .dot.offline { background: var(--error); animation: none; }
-        @keyframes pulse {
-            0%   { box-shadow: 0 0 0 0 rgba(16,185,129,.5); }
-            70%  { box-shadow: 0 0 0 7px rgba(16,185,129,0); }
-            100% { box-shadow: 0 0 0 0 rgba(16,185,129,0); }
+            box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.2);
         }
 
-        /* ── CARD ── */
-        .card {
-            background: var(--card);
-            border: 1px solid var(--border);
-            border-radius: var(--r);
-            padding: 22px 20px;
-            margin-bottom: 16px;
-        }
-        .card-title {
-            font-size: 13px;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: .6px;
-            color: var(--muted);
-            margin-bottom: 16px;
+        .status-dot.offline {
+            background: var(--error);
+            box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.2);
         }
 
-        /* ── SUBSCRIPTION GRID ── */
-        .sub-grid {
+        /* --- Bento Grid --- */
+        .bento-grid {
             display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 18px;
-        }
-        @media(max-width: 480px) { .sub-grid { grid-template-columns: 1fr; } }
-        .sub-item { display: flex; flex-direction: column; gap: 7px; }
-        .sub-label {
-            display: flex;
-            justify-content: space-between;
-            align-items: baseline;
-            font-size: 13px;
-            color: var(--muted);
-        }
-        .sub-val {
-            font-size: 22px;
-            font-weight: 700;
-            color: var(--text);
-            min-height: 28px;
-        }
-        .bar-bg {
-            height: 7px;
-            background: var(--border);
-            border-radius: 4px;
-            overflow: hidden;
-        }
-        .bar-fill {
-            height: 100%;
-            width: 0;
-            border-radius: 4px;
-            background: var(--primary);
-            transition: width .6s ease;
-        }
-        .bar-fill.warn { background: var(--warn); }
-        .bar-fill.danger { background: var(--error); }
-
-        /* ── SERVER CARD ── */
-        .server-row {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            flex-wrap: wrap;
+            grid-template-columns: repeat(3, 1fr);
             gap: 16px;
         }
-        .server-col { display: flex; flex-direction: column; gap: 4px; }
-        .server-col .lbl { font-size: 12px; color: var(--muted); }
-        .server-col .val { font-size: 17px; font-weight: 600; }
-        .ping-val { font-family: monospace; font-size: 18px; font-weight: 700; color: var(--success); }
 
-        /* ── CONNECT CARD ── */
-        .connect-inner {
+        .card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-light);
+            border-top: 1px solid rgba(255,255,255,0.2);
+            border-radius: var(--radius-xl);
+            padding: 28px;
+            position: relative;
+            overflow: hidden;
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 4px 24px -8px rgba(0,0,0,0.5);
+            
+            /* Cascade Animation */
+            opacity: 0;
+            transform: translateY(20px);
+            animation: fadeUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+
+        .delay-1 { animation-delay: 0.1s; }
+        .delay-2 { animation-delay: 0.2s; }
+        .delay-3 { animation-delay: 0.3s; }
+
+        /* Card Spans */
+        .card-traffic { grid-column: span 1; grid-row: span 2; }
+        .card-plan { grid-column: span 2; grid-row: span 1; display: flex; flex-direction: row; align-items: center; justify-content: space-between;}
+        .card-node { grid-column: span 2; grid-row: span 1; }
+        .card-access { grid-column: span 3; }
+        .card-guide { grid-column: span 3; }
+
+        @media (max-width: 800px) {
+            .bento-grid { grid-template-columns: 1fr; }
+            .card-traffic, .card-plan, .card-node, .card-access, .card-guide { grid-column: span 1; grid-row: auto; }
+            .card-plan { flex-direction: column; align-items: flex-start; gap: 20px;}
+        }
+
+        /* --- Typography inside Cards --- */
+        .card-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: var(--text-secondary);
+            font-size: 14px;
+            font-weight: 500;
+            margin-bottom: 20px;
+        }
+        
+        .card-header svg { stroke: var(--text-secondary); }
+
+        .data-value {
+            font-size: 36px;
+            font-weight: 700;
+            letter-spacing: -0.03em;
+            line-height: 1.1;
+            margin-bottom: 8px;
+        }
+
+        .data-sub {
+            font-size: 14px;
+            color: var(--text-secondary);
+        }
+
+        /* --- Circular Progress (Traffic) --- */
+        .traffic-widget {
             display: flex;
             flex-direction: column;
             align-items: center;
-            gap: 18px;
+            justify-content: center;
+            flex-grow: 1;
+            margin-top: 10px;
         }
-        #qrcode {
+
+        .circular-chart {
+            display: block;
+            margin: 0 auto;
+            max-width: 160px;
+            max-height: 160px;
+        }
+
+        .circle-bg {
+            fill: none;
+            stroke: var(--border-faint);
+            stroke-width: 3;
+        }
+
+        .circle-progress {
+            fill: none;
+            stroke: var(--accent);
+            stroke-width: 3;
+            stroke-linecap: round;
+            transition: stroke-dashoffset 1.5s cubic-bezier(0.16, 1, 0.3, 1);
+            transform: rotate(-90deg);
+            transform-origin: 50% 50%;
+        }
+
+        .traffic-details {
+            text-align: center;
+            margin-top: 24px;
+            width: 100%;
+            background: rgba(255,255,255,0.02);
+            border-radius: var(--radius-md);
+            padding: 12px;
+        }
+
+        /* --- Linear Progress --- */
+        .progress-track {
+            background: rgba(255,255,255,0.05);
+            height: 6px;
+            border-radius: 999px;
+            overflow: hidden;
+            margin-top: auto;
+            width: 100%;
+            min-width: 200px;
+        }
+        .progress-fill {
+            background: var(--text-primary);
+            height: 100%;
+            width: 0%;
+            border-radius: 999px;
+            transition: width 1s ease-out;
+        }
+
+        /* --- Node Stats --- */
+        .node-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 16px;
+            margin-top: 12px;
+        }
+        .stat-box {
+            border-left: 2px solid var(--border-light);
+            padding-left: 12px;
+        }
+        .stat-label {
+            font-size: 12px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 4px;
+        }
+        .stat-val {
+            font-family: var(--font-mono);
+            font-size: 15px;
+            color: var(--text-primary);
+        }
+        .ping-val { color: var(--success); }
+
+        /* --- Access Card --- */
+        .access-layout {
+            display: flex;
+            align-items: center;
+            gap: 32px;
+        }
+        
+        .qr-container {
             background: #fff;
             padding: 12px;
-            border-radius: 10px;
-            display: inline-block;
+            border-radius: 14px;
+            flex-shrink: 0;
+            box-shadow: 0 8px 32px rgba(255,255,255,0.1);
         }
-        .sub-link-box {
-            width: 100%;
-            background: var(--card2);
-            border: 1px solid var(--border);
-            border-radius: 8px;
-            padding: 10px 14px;
-            font-size: 13px;
-            color: var(--muted);
-            word-break: break-all;
-            font-family: monospace;
+
+        .access-actions {
+            flex-grow: 1;
         }
-        .btn {
+
+        .access-input-group {
             display: flex;
+            background: rgba(0,0,0,0.3);
+            border: 1px solid var(--border-light);
+            border-radius: var(--radius-md);
+            padding: 6px;
+            margin-top: 16px;
             align-items: center;
-            justify-content: center;
-            gap: 8px;
-            width: 100%;
-            max-width: 320px;
-            padding: 13px 20px;
-            background: var(--primary);
-            color: #fff;
+        }
+
+        .fake-input {
+            flex-grow: 1;
+            padding: 0 16px;
+            font-family: var(--font-mono);
+            font-size: 14px;
+            color: var(--text-secondary);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .btn {
+            background: var(--text-primary);
+            color: var(--bg-base);
             border: none;
-            border-radius: 10px;
-            font-size: 15px;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-size: 14px;
             font-weight: 600;
             cursor: pointer;
-            transition: background .15s, transform .1s;
-        }
-        .btn:hover { background: var(--primary-h); }
-        .btn:active { transform: scale(.98); }
-        .btn.copied { background: var(--success); }
-
-        /* ── TABS ── */
-        .tabs {
             display: flex;
-            gap: 4px;
-            border-bottom: 1px solid var(--border);
-            margin-bottom: 16px;
+            align-items: center;
+            gap: 8px;
+            transition: transform 0.1s, background 0.2s;
+        }
+
+        .btn:hover { transform: scale(0.98); }
+        .btn.copied { background: var(--success); color: #fff; }
+
+        @media(max-width: 600px) {
+            .access-layout { flex-direction: column; align-items: stretch; text-align: center; }
+            .qr-container { align-self: center; }
+        }
+
+        /* --- Guide Tabs --- */
+        .tabs-header {
+            display: flex;
+            gap: 8px;
+            border-bottom: 1px solid var(--border-light);
+            padding-bottom: 16px;
+            margin-bottom: 24px;
             overflow-x: auto;
-            scrollbar-width: none;
         }
-        .tabs::-webkit-scrollbar { display: none; }
-        .tab {
-            padding: 9px 14px;
-            font-size: 14px;
-            font-weight: 500;
-            color: var(--muted);
-            background: none;
+        .tab-btn {
+            background: transparent;
             border: none;
-            border-bottom: 2px solid transparent;
+            color: var(--text-secondary);
+            font-size: 15px;
+            font-weight: 500;
             cursor: pointer;
+            padding: 8px 16px;
+            border-radius: 8px;
+            transition: 0.2s;
             white-space: nowrap;
-            transition: color .15s;
         }
-        .tab.active { color: var(--primary); border-bottom-color: var(--primary); }
-        .tab-pane { display: none; }
-        .tab-pane.active { display: block; animation: fadeIn .2s; }
-        @keyframes fadeIn { from { opacity:0; } to { opacity:1; } }
-        .steps { list-style: none; counter-reset: s; }
-        .steps li {
-            counter-increment: s;
+        .tab-btn:hover { color: var(--text-primary); background: rgba(255,255,255,0.05); }
+        .tab-btn.active { color: var(--text-primary); background: rgba(255,255,255,0.1); }
+
+        .tab-content { display: none; }
+        .tab-content.active { display: block; animation: fadeIn 0.4s ease forwards; }
+
+        .step-list {
+            list-style: none;
+            counter-reset: steps;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .step-list li {
             position: relative;
-            padding-left: 38px;
-            margin-bottom: 14px;
-            font-size: 14px;
-            color: #cbd5e1;
-            line-height: 1.55;
+            padding-left: 48px;
+            color: #a1a1aa;
+            font-size: 15px;
         }
-        .steps li::before {
-            content: counter(s);
+        .step-list li b { color: #fff; }
+
+        .step-list li::before {
+            counter-increment: steps;
+            content: counter(steps);
             position: absolute;
-            left: 0; top: 0;
-            width: 24px; height: 24px;
-            background: var(--border);
+            left: 0;
+            top: -2px;
+            width: 28px;
+            height: 28px;
             border-radius: 50%;
+            background: var(--border-light);
+            color: var(--text-primary);
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 11px;
+            font-size: 12px;
             font-weight: 700;
-            color: var(--text);
+            font-family: var(--font-mono);
         }
-        .steps b { color: #fff; }
 
-        /* ── SKELETON ── */
-        .sk {
-            background: var(--border);
+        /* --- Skeletons --- */
+        .skeleton {
+            background: linear-gradient(90deg, rgba(255,255,255,0.03) 25%, rgba(255,255,255,0.08) 50%, rgba(255,255,255,0.03) 75%);
+            background-size: 200% 100%;
+            animation: skeleton-loading 1.5s infinite linear;
             color: transparent !important;
-            border-radius: 5px;
-            animation: skAnim 1.4s infinite;
+            border-radius: 6px;
             user-select: none;
-            display: inline-block;
-        }
-        .sk * { visibility: hidden; }
-        @keyframes skAnim {
-            0%,100% { opacity: 1; }
-            50%      { opacity: .5; }
         }
 
-        /* ── FOOTER ── */
+        /* --- Keyframes --- */
+        @keyframes fadeUp { to { opacity: 1; transform: translateY(0); } }
+        @keyframes fadeDown { 
+            from { opacity: 0; transform: translateY(-20px); } 
+            to { opacity: 1; transform: translateY(0); } 
+        }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes skeleton-loading {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
+
+        /* Footer */
         footer {
             text-align: center;
-            color: var(--muted);
             font-size: 13px;
-            margin-top: 28px;
+            color: var(--text-muted);
+            padding-top: 20px;
         }
-        footer a { color: var(--primary); text-decoration: none; }
-        footer a:hover { text-decoration: underline; }
+        footer a { color: var(--text-secondary); text-decoration: none; transition: 0.2s; }
+        footer a:hover { color: var(--text-primary); }
     </style>
 </head>
 <body>
-<div class="wrap">
 
+<div class="layout">
+    <!-- Header -->
     <header>
-        <div class="logo">
-            <svg width="26" height="26" viewBox="0 0 24 24" fill="none"
-                 stroke="var(--primary)" stroke-width="2.5"
-                 stroke-linecap="round" stroke-linejoin="round">
-                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+        <div class="brand">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <polygon points="12 2 2 7 12 12 22 7 12 2"></polygon>
+                <polyline points="2 17 12 22 22 17"></polyline>
+                <polyline points="2 12 12 17 22 12"></polyline>
             </svg>
-            Cocut
+            Cacut
         </div>
-        <div class="badge">
-            <div class="dot pulse" id="status-dot"></div>
-            <span id="status-text">Проверка…</span>
+        <div class="status-badge" id="app-status">
+            <div class="status-dot" id="status-dot"></div>
+            <span id="status-text">Network Active</span>
         </div>
     </header>
 
-    <!-- Подписка -->
-    <div class="card">
-        <div class="card-title">Подписка</div>
-        <div class="sub-grid">
-            <div class="sub-item">
-                <div class="sub-label">
-                    <span>Осталось дней</span>
-                    <span id="date-end" class="sk">до --.--.----</span>
-                </div>
-                <div class="sub-val sk" id="days-left" style="width:90px">-- д</div>
-                <div class="bar-bg"><div class="bar-fill" id="days-bar"></div></div>
+    <!-- Dashboard Grid -->
+    <main class="bento-grid">
+        
+        <!-- Трафик (Круговой) -->
+        <div class="card card-traffic">
+            <div class="card-header">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.21 15.89A10 10 0 1 1 8 2.83"></path><path d="M22 12A10 10 0 0 0 12 2v10z"></path></svg>
+                Расход трафика
             </div>
-            <div class="sub-item">
-                <div class="sub-label">
-                    <span>Трафик использовано / всего</span>
-                    <span id="traffic-text" class="sk">-- / -- ГБ</span>
-                </div>
-                <div class="sub-val sk" id="traffic-left" style="width:110px">-- ГБ</div>
-                <div class="bar-bg"><div class="bar-fill" id="traffic-bar"></div></div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Сервер -->
-    <div class="card">
-        <div class="card-title">Текущий сервер</div>
-        <div class="server-row">
-            <div class="server-col">
-                <span class="lbl">Локация</span>
-                <span class="val" id="server-location">🇺🇸 США (Railway)</span>
-            </div>
-            <div class="server-col">
-                <span class="lbl">Протокол</span>
-                <span class="val">VLESS + WS + TLS</span>
-            </div>
-            <div class="server-col">
-                <span class="lbl">Статус сервера</span>
-                <span class="val" id="server-status">—</span>
-            </div>
-            <div class="server-col">
-                <span class="lbl">Пинг</span>
-                <span class="ping-val sk" id="ping-text" style="width:60px">--- ms</span>
-            </div>
-        </div>
-    </div>
-
-    <!-- QR + кнопка -->
-    <div class="card">
-        <div class="card-title">Подключение</div>
-        <div class="connect-inner">
-            <div id="qrcode"></div>
-            <div class="sub-link-box" id="sub-link-box">Загрузка…</div>
-            <button class="btn" id="copy-btn">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
-                     stroke="currentColor" stroke-width="2">
-                    <rect x="9" y="9" width="13" height="13" rx="2"/>
-                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+            
+            <div class="traffic-widget">
+                <svg viewBox="0 0 36 36" class="circular-chart">
+                    <path class="circle-bg"
+                        d="M18 2.0845
+                        a 15.9155 15.9155 0 0 1 0 31.831
+                        a 15.9155 15.9155 0 0 1 0 -31.831"
+                    />
+                    <path class="circle-progress" id="traffic-circle"
+                        stroke-dasharray="100, 100"
+                        stroke-dashoffset="100"
+                        d="M18 2.0845
+                        a 15.9155 15.9155 0 0 1 0 31.831
+                        a 15.9155 15.9155 0 0 1 0 -31.831"
+                    />
                 </svg>
-                Скопировать ссылку подписки
-            </button>
-        </div>
-    </div>
-
-    <!-- Инструкция -->
-    <div class="card">
-        <div class="card-title">Инструкция по подключению</div>
-        <div class="tabs">
-            <button class="tab active" data-tab="android">Android</button>
-            <button class="tab" data-tab="ios">iOS</button>
-            <button class="tab" data-tab="win">Windows</button>
-            <button class="tab" data-tab="mac">macOS</button>
+                
+                <div class="traffic-details">
+                    <div class="data-value skeleton" id="traffic-left" style="font-size: 28px; display:inline-block; margin-bottom: 0;">-- GB</div>
+                    <div class="data-sub" style="margin-top: 4px;">осталось</div>
+                </div>
+            </div>
+            
+            <div class="data-sub skeleton" id="traffic-text" style="text-align: center; margin-top: 16px; font-family: var(--font-mono); font-size: 12px;">
+                Использовано: -- / Всего: --
+            </div>
         </div>
 
-        <div class="tab-pane active" id="tab-android">
-            <ul class="steps">
-                <li>Установите <b>v2rayNG</b> из Google Play.</li>
-                <li>Скопируйте ссылку подписки кнопкой выше.</li>
-                <li>В приложении: меню → «Группы подписок» → «+» → вставьте ссылку → Сохранить.</li>
-                <li>Три точки → «Обновить подписку», выберите сервер Cocut, нажмите ▶.</li>
-            </ul>
+        <!-- Подписка -->
+        <div class="card card-plan delay-1">
+            <div>
+                <div class="card-header">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                    Статус подписки
+                </div>
+                <div class="data-value skeleton" id="days-left" style="display:inline-block;">-- дней</div>
+                <div class="data-sub skeleton" id="date-end" style="display:inline-block; width: 150px;">до --.--.----</div>
+            </div>
+            <div class="progress-track">
+                <div class="progress-fill" id="days-bar"></div>
+            </div>
         </div>
-        <div class="tab-pane" id="tab-ios">
-            <ul class="steps">
-                <li>Установите <b>FoXray</b> или <b>V2Box</b> из App Store.</li>
-                <li>Скопируйте ссылку подписки кнопкой выше.</li>
-                <li>В приложении: Subscriptions → «+» → Import from URL → вставьте ссылку.</li>
-                <li>Обновите конфигурацию, выберите сервер Cocut и нажмите «Connect».</li>
-            </ul>
+
+        <!-- Узел связи -->
+        <div class="card card-node delay-2">
+            <div class="card-header">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="8" rx="2" ry="2"></rect><rect x="2" y="14" width="20" height="8" rx="2" ry="2"></rect><line x1="6" y1="6" x2="6.01" y2="6"></line><line x1="6" y1="18" x2="6.01" y2="18"></line></svg>
+                Текущий узел
+            </div>
+            <div style="font-size: 20px; font-weight: 600; color: #fff;" id="node-location">🇺🇸 USA / Railway</div>
+            
+            <div class="node-stats">
+                <div class="stat-box">
+                    <div class="stat-label">Протокол</div>
+                    <div class="stat-val">VLESS</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-label">Задержка (Ping)</div>
+                    <div class="stat-val ping-val skeleton" id="ping-text">-- ms</div>
+                </div>
+            </div>
         </div>
-        <div class="tab-pane" id="tab-win">
-            <ul class="steps">
-                <li>Скачайте <b>Hiddify</b> или <b>v2rayN</b> с GitHub.</li>
-                <li>Скопируйте ссылку подписки кнопкой выше.</li>
-                <li>В приложении: Подписка → Настройки подписки → Добавить → вставьте URL.</li>
-                <li>Обновите (Ctrl+F), выберите сервер Cocut и нажмите Enter.</li>
-            </ul>
+
+        <!-- Ключ доступа -->
+        <div class="card card-access delay-3">
+            <div class="access-layout">
+                <div class="qr-container" id="qrcode"></div>
+                
+                <div class="access-actions">
+                    <div class="card-header" style="margin-bottom: 8px;">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"></path></svg>
+                        Ваш ключ доступа
+                    </div>
+                    <p class="data-sub">Скопируйте эту ссылку и вставьте в клиентское приложение на вашем устройстве.</p>
+                    
+                    <div class="access-input-group">
+                        <div class="fake-input" id="url-display">...</div>
+                        <button class="btn" id="copy-btn" onclick="copySubLink()">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                            Копировать
+                        </button>
+                    </div>
+                </div>
+            </div>
         </div>
-        <div class="tab-pane" id="tab-mac">
-            <ul class="steps">
-                <li>Установите <b>Hiddify</b> или <b>V2Box</b> для macOS.</li>
-                <li>Скопируйте ссылку подписки кнопкой выше.</li>
-                <li>Добавить подписку → вставьте URL → Сохранить.</li>
-                <li>Обновите список серверов, выберите Cocut и включите VPN.</li>
-            </ul>
+
+        <!-- Инструкции -->
+        <div class="card card-guide delay-3">
+            <div class="tabs-header">
+                <button class="tab-btn active" onclick="switchTab('ios')">Apple iOS</button>
+                <button class="tab-btn" onclick="switchTab('android')">Android</button>
+                <button class="tab-btn" onclick="switchTab('desktop')">Windows / macOS</button>
+            </div>
+
+            <div id="tab-ios" class="tab-content active">
+                <ul class="step-list">
+                    <li>Установите бесплатное приложение <b>V2Box</b> или <b>FoXray</b> из App Store.</li>
+                    <li>Скопируйте ваш личный ключ доступа (кнопка выше).</li>
+                    <li>Откройте приложение, перейдите в раздел <b>Configs</b> (или Subscriptions).</li>
+                    <li>Нажмите иконку <b>+</b>, выберите <b>Import from URL</b>, вставьте ссылку и подключитесь.</li>
+                </ul>
+            </div>
+            
+            <div id="tab-android" class="tab-content">
+                <ul class="step-list">
+                    <li>Скачайте клиент <b>v2rayNG</b> из Google Play Store.</li>
+                    <li>Скопируйте ключ доступа с помощью кнопки в панели.</li>
+                    <li>Откройте боковое меню приложения, выберите <b>Группы подписок</b> -> <b>+</b> -> вставьте ссылку.</li>
+                    <li>Нажмите три точки в правом верхнем углу -> <b>Обновить подписку</b>. Выберите сервер и нажмите старт.</li>
+                </ul>
+            </div>
+
+            <div id="tab-desktop" class="tab-content">
+                <ul class="step-list">
+                    <li>Скачайте приложение <b>Hiddify Next</b> или <b>v2rayN</b>.</li>
+                    <li>Скопируйте ссылку вашей подписки.</li>
+                    <li>Нажмите <b>Новый профиль</b> (Add Subscription) и вставьте скопированный URL.</li>
+                    <li>Нажмите кнопку Обновить (Update), выберите узел связи и нажмите главную кнопку включения.</li>
+                </ul>
+            </div>
         </div>
-    </div>
+
+    </main>
 
     <footer>
-        Нужна помощь? <a href="https://t.me/your_support" target="_blank">Поддержка в Telegram</a>
-        &nbsp;·&nbsp; Cocut v1.0
+        <p>Cacut Core Engine &nbsp;|&nbsp; <a href="https://t.me/your_support" target="_blank">Техническая поддержка Telegram</a></p>
     </footer>
-
 </div>
 
 <script>
+    // URL подписки
     const SUB_URL = window.location.origin + '/sub';
-    const HEALTH_URL = window.location.origin + '/health';
-    const INFO_URL = window.location.origin + '/info';
+    document.getElementById('url-display').innerText = SUB_URL;
+    
+    // Элементы
+    const els = {
+        daysLeft: document.getElementById('days-left'),
+        dateEnd: document.getElementById('date-end'),
+        daysBar: document.getElementById('days-bar'),
+        trafficLeft: document.getElementById('traffic-left'),
+        trafficText: document.getElementById('traffic-text'),
+        trafficCircle: document.getElementById('traffic-circle'),
+        pingText: document.getElementById('ping-text'),
+        copyBtn: document.getElementById('copy-btn'),
+        statusDot: document.getElementById('status-dot'),
+        statusText: document.getElementById('status-text')
+    };
 
-    /* ── helpers ── */
-    function fmt(bytes) {
-        return (bytes / (1024 ** 3)).toFixed(2);
-    }
-    function unsk(el) {
-        if (el) el.classList.remove('sk');
-    }
-
-    /* ── QR ── */
-    new QRCode(document.getElementById('qrcode'), {
+    // QR код
+    new QRCode(document.getElementById("qrcode"), {
         text: SUB_URL,
-        width: 160, height: 160,
-        colorDark: '#0f172a',
-        colorLight: '#ffffff',
-        correctLevel: QRCode.CorrectLevel.M
+        width: 110,
+        height: 110,
+        colorDark : "#000000",
+        colorLight : "#ffffff",
+        correctLevel : QRCode.CorrectLevel.M
     });
 
-    /* ── sub link box ── */
-    document.getElementById('sub-link-box').textContent = SUB_URL;
+    // Утилиты
+    function formatGB(bytes) { return (bytes / 1073741824).toFixed(2); }
+    function clearSkeletons() { document.querySelectorAll('.skeleton').forEach(e => e.classList.remove('skeleton')); }
 
-    /* ── copy button ── */
-    const copyBtn = document.getElementById('copy-btn');
-    copyBtn.addEventListener('click', async () => {
-        try {
-            await navigator.clipboard.writeText(SUB_URL);
-        } catch {
-            // fallback для старых браузеров
-            const ta = document.createElement('textarea');
-            ta.value = SUB_URL;
-            document.body.appendChild(ta);
-            ta.select();
-            document.execCommand('copy');
-            document.body.removeChild(ta);
-        }
-        const orig = copyBtn.innerHTML;
-        copyBtn.classList.add('copied');
-        copyBtn.innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> Скопировано!`;
-        setTimeout(() => {
-            copyBtn.classList.remove('copied');
-            copyBtn.innerHTML = orig;
-        }, 2200);
-    });
-
-    /* ── tabs ── */
-    document.querySelectorAll('.tab').forEach(btn => {
-        btn.addEventListener('click', () => {
-            document.querySelectorAll('.tab').forEach(b => b.classList.remove('active'));
-            document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
-            btn.classList.add('active');
-            document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
+    function parseHeaders(headerStr) {
+        if (!headerStr) return null;
+        const info = {};
+        headerStr.split(';').forEach(p => {
+            const [k, v] = p.trim().split('=');
+            if (k && v) info[k.trim()] = parseInt(v.trim(), 10);
         });
-    });
-
-    /* ── ping / status ── */
-    async function measurePing() {
-        const dot  = document.getElementById('status-dot');
-        const stxt = document.getElementById('status-text');
-        const ptxt = document.getElementById('ping-text');
-        const srvStatus = document.getElementById('server-status');
-        try {
-            const t0 = performance.now();
-            const res = await fetch(HEALTH_URL, { method: 'HEAD', cache: 'no-store' });
-            const ms = Math.round(performance.now() - t0);
-            if (!res.ok) throw new Error();
-
-            unsk(ptxt);
-            ptxt.textContent = ms + ' ms';
-            ptxt.style.color = ms < 150 ? 'var(--success)' : ms < 300 ? 'var(--warn)' : 'var(--error)';
-
-            dot.className = 'dot pulse';
-            stxt.textContent = 'Онлайн';
-            srvStatus.textContent = '✅ Работает';
-            srvStatus.style.color = 'var(--success)';
-        } catch {
-            unsk(ptxt);
-            ptxt.textContent = 'Ошибка';
-            ptxt.style.color = 'var(--error)';
-            dot.className = 'dot offline';
-            stxt.textContent = 'Недоступен';
-            srvStatus.textContent = '❌ Недоступен';
-            srvStatus.style.color = 'var(--error)';
-        }
+        return info;
     }
 
-    /* ── subscription info ── */
+    // Анимация кругового бара трафика (SVG dashoffset)
+    function setTrafficCircle(percent) {
+        // Значение от 0 до 100
+        const strokeDashOffset = 100 - percent;
+        els.trafficCircle.style.strokeDashoffset = strokeDashOffset;
+        
+        if (percent > 90) els.trafficCircle.style.stroke = 'var(--error)';
+        else if (percent > 75) els.trafficCircle.style.stroke = 'var(--warning)';
+    }
+
+    // Загрузка данных
     async function fetchSub() {
-        const els = {
-            daysLeft:     document.getElementById('days-left'),
-            dateEnd:      document.getElementById('date-end'),
-            daysBar:      document.getElementById('days-bar'),
-            trafficText:  document.getElementById('traffic-text'),
-            trafficLeft:  document.getElementById('traffic-left'),
-            trafficBar:   document.getElementById('traffic-bar'),
-        };
-
         try {
-            const res = await fetch('/sub', { method: 'HEAD' });
-            const hdr = res.headers.get('subscription-userinfo');
-            if (!hdr) throw new Error('no header');
+            const res = await fetch('/sub', { method: 'HEAD' }); 
+            const header = res.headers.get('subscription-userinfo');
+            
+            clearSkeletons();
 
-            const info = {};
-            hdr.split(';').forEach(p => {
-                const [k, v] = p.trim().split('=');
-                if (k && v !== undefined) info[k.trim()] = parseInt(v.trim(), 10);
-            });
+            if (header) {
+                const data = parseHeaders(header);
+                
+                // Трафик
+                const used = (data.upload || 0) + (data.download || 0);
+                const total = data.total || 1; 
+                const leftGB = formatGB(Math.max(0, total - used));
+                const percent = Math.min((used / total) * 100, 100);
 
-            // Трафик
-            const used  = (info.upload || 0) + (info.download || 0);
-            const total = info.total || 107374182400; // 100 GB fallback
-            const usedGB  = fmt(used);
-            const totalGB = fmt(total);
-            const leftGB  = fmt(Math.max(0, total - used));
-            const pct = Math.min((used / total) * 100, 100);
+                els.trafficLeft.innerText = `${leftGB} GB`;
+                els.trafficText.innerText = `Использовано: ${formatGB(used)} / Всего: ${formatGB(total)} GB`;
+                
+                // Отрисовка круга
+                setTimeout(() => setTrafficCircle(percent), 100);
 
-            unsk(els.trafficText);
-            unsk(els.trafficLeft);
-            els.trafficText.textContent = `${usedGB} / ${totalGB} ГБ`;
-            els.trafficLeft.textContent = `${leftGB} ГБ осталось`;
-            els.trafficBar.style.width  = pct + '%';
-            if (pct > 90) els.trafficBar.classList.add('danger');
-            else if (pct > 70) els.trafficBar.classList.add('warn');
-
-            // Дни
-            if (info.expire && info.expire > 0) {
-                const endDate = new Date(info.expire * 1000);
-                const daysLeft = Math.max(0, Math.ceil((endDate - Date.now()) / 86400000));
-                const totalDays = 30;
-                const daysPct = Math.min(((totalDays - daysLeft) / totalDays) * 100, 100);
-
-                unsk(els.daysLeft);
-                unsk(els.dateEnd);
-                els.daysLeft.textContent = daysLeft + ' дней';
-                els.dateEnd.textContent  = 'до ' + endDate.toLocaleDateString('ru-RU');
-                els.daysBar.style.width  = daysPct + '%';
-                if (daysLeft < 3) els.daysBar.classList.add('danger');
-                else if (daysLeft < 7) els.daysBar.classList.add('warn');
-            } else {
-                // expire=0 → безлимитная подписка
-                unsk(els.daysLeft);
-                unsk(els.dateEnd);
-                els.daysLeft.textContent = '∞ дней';
-                els.dateEnd.textContent  = 'Безлимитно';
-                els.daysBar.style.width  = '0%';
-            }
-
+                // Дни
+                if (data.expire) {
+                    const end = new Date(data.expire * 1000);
+                    const now = new Date();
+                    const days = Math.max(0, Math.ceil((end - now) / 86400000));
+                    
+                    els.daysLeft.innerText = `${days} дней`;
+                    els.dateEnd.innerText = `до ${end.toLocaleDateString('ru-RU', {day:'numeric', month:'short', year:'numeric'})}`;
+                    
+                    // Прогресс бар дней (база 30)
+                    const pDays = Math.min(((30 - days) / 30) * 100, 100);
+                    els.daysBar.style.width = `${pDays}%`;
+                    if (days < 4) els.daysBar.style.background = 'var(--error)';
+                } else {
+                    els.daysLeft.innerText = "Безлимит";
+                    els.dateEnd.innerText = "Срок не ограничен";
+                    els.daysBar.style.width = "0%";
+                }
+            } else throw new Error();
         } catch (e) {
-            // Если /sub недоступен — показываем что данные недоступны (без демо)
-            Object.values(els).forEach(el => {
-                if (el && el.classList) unsk(el);
-            });
-            els.daysLeft.textContent     = 'Нет данных';
-            els.dateEnd.textContent      = '—';
-            els.trafficText.textContent  = 'Нет данных';
-            els.trafficLeft.textContent  = '—';
+            clearSkeletons();
+            els.trafficLeft.innerText = "Нет данных";
+            els.trafficText.innerText = "Сервер недоступен";
+            els.daysLeft.innerText = "—";
+            els.dateEnd.innerText = "—";
         }
     }
 
-    /* ── server location from /info ── */
+    // Загружаем реальный домен с /info
     async function fetchInfo() {
         try {
-            const res = await fetch(INFO_URL);
+            const res = await fetch('/info');
             const data = await res.json();
             if (data.domain) {
-                const loc = document.getElementById('server-location');
-                // Railway регион US West → Калифорния
-                loc.textContent = '🇺🇸 США · ' + data.domain;
+                const el = document.getElementById('node-location');
+                if (el) el.innerText = '🇺🇸 USA / ' + data.domain;
             }
-        } catch { /* не критично */ }
+        } catch(e) {}
     }
 
-    /* ── init ── */
-    fetchSub();
-    fetchInfo();
-    measurePing();
-    setInterval(measurePing, 15000);
+    // Ping
+    async function checkPing() {
+        try {
+            const t0 = performance.now();
+            const res = await fetch('/health', { method: 'HEAD', cache: 'no-store' });
+            const t1 = performance.now();
+            
+            if (res.ok) {
+                const ping = Math.round(t1 - t0);
+                els.pingText.classList.remove('skeleton');
+                els.pingText.innerText = `${ping} ms`;
+                els.pingText.style.color = ping < 120 ? 'var(--success)' : (ping < 200 ? 'var(--warning)' : 'var(--error)');
+                els.statusDot.className = 'status-dot';
+                els.statusText.innerText = 'Network Active';
+            } else throw new Error();
+        } catch (e) {
+            els.pingText.classList.remove('skeleton');
+            els.pingText.innerText = "OFFLINE";
+            els.pingText.style.color = 'var(--error)';
+            els.statusDot.className = 'status-dot offline';
+            els.statusText.innerText = 'Node Offline';
+        }
+    }
+
+    // Копирование
+    async function copySubLink() {
+        try {
+            await navigator.clipboard.writeText(SUB_URL);
+            const originalHTML = els.copyBtn.innerHTML;
+            
+            els.copyBtn.classList.add('copied');
+            els.copyBtn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg> Скопировано`;
+            
+            setTimeout(() => {
+                els.copyBtn.classList.remove('copied');
+                els.copyBtn.innerHTML = originalHTML;
+            }, 2000);
+        } catch (err) {
+            alert('Скопируйте: ' + SUB_URL);
+        }
+    }
+
+    // Табы
+    function switchTab(tabId) {
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+        event.target.classList.add('active');
+        document.getElementById(`tab-${tabId}`).classList.add('active');
+    }
+
+    // Запуск
+    window.addEventListener('DOMContentLoaded', () => {
+        fetchSub();
+        fetchInfo();
+        checkPing();
+        setInterval(checkPing, 10000);
+    });
 </script>
 </body>
 </html>
