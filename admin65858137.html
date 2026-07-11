@@ -1,0 +1,673 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cacut — Admin Panel</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <style>
+        :root {
+            /* Палитра Graphite & Silver */
+            --bg-base: #000000;
+            --bg-surface: #0a0a0a;
+            --bg-card: rgba(15, 15, 15, 0.6);
+            --border-light: rgba(255, 255, 255, 0.12);
+            --border-faint: rgba(255, 255, 255, 0.04);
+            
+            --text-primary: #ffffff;
+            --text-secondary: #888888;
+            --text-muted: #555555;
+            
+            --accent: #ffffff;
+            --accent-blue: #3b82f6;
+            --success: #10b981;
+            --error: #ef4444;
+            --warning: #f59e0b;
+
+            --radius-xl: 24px;
+            --radius-lg: 16px;
+            --radius-md: 12px;
+            
+            --font-main: "SF Pro Display", -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, sans-serif;
+            --font-mono: ui-monospace, "SF Mono", Menlo, Monaco, Consolas, monospace;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            background-color: var(--bg-base);
+            background-image: 
+                radial-gradient(circle at 15% 0%, rgba(20, 20, 25, 1) 0%, transparent 50%),
+                radial-gradient(circle at 85% 100%, rgba(15, 20, 25, 1) 0%, transparent 50%);
+            background-attachment: fixed;
+            color: var(--text-primary);
+            font-family: var(--font-main);
+            line-height: 1.5;
+            min-height: 100vh;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* --- Layout --- */
+        .layout {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 40px 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 32px;
+            display: none; /* Скрыто до авторизации */
+        }
+
+        header { display: flex; justify-content: space-between; align-items: center; }
+        
+        .brand {
+            display: flex; align-items: center; gap: 12px;
+            font-size: 24px; font-weight: 700; letter-spacing: -0.04em;
+        }
+        .brand svg { width: 28px; height: 28px; }
+
+        .bento-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 16px;
+        }
+
+        .card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-light);
+            border-top: 1px solid rgba(255,255,255,0.2);
+            border-radius: var(--radius-xl);
+            padding: 24px;
+            position: relative;
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+            display: flex; flex-direction: column;
+            box-shadow: 0 4px 24px -8px rgba(0,0,0,0.5);
+            animation: fadeUp 0.5s ease-out forwards;
+        }
+
+        /* Grid spans */
+        .card-status { grid-column: span 1; }
+        .card-hardware { grid-column: span 2; }
+        .card-actions { grid-column: span 1; }
+        .card-subs { grid-column: span 4; }
+        .card-logs { grid-column: span 4; }
+
+        @media (max-width: 900px) {
+            .bento-grid { grid-template-columns: 1fr; }
+            .card-status, .card-hardware, .card-actions, .card-subs, .card-logs { grid-column: span 1; }
+        }
+
+        /* --- Typography & Elements --- */
+        .card-header {
+            display: flex; align-items: center; gap: 10px;
+            color: var(--text-secondary); font-size: 14px; font-weight: 500; margin-bottom: 20px;
+        }
+        .card-header svg { stroke: var(--text-secondary); }
+        
+        .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+        .stat-box { border-left: 2px solid var(--border-light); padding-left: 12px; margin-bottom: 12px;}
+        .stat-label { font-size: 12px; color: var(--text-muted); text-transform: uppercase; margin-bottom: 4px; }
+        .stat-val { font-family: var(--font-mono); font-size: 16px; color: var(--text-primary); word-break: break-all;}
+        
+        .btn {
+            background: var(--text-primary); color: var(--bg-base);
+            border: none; padding: 10px 16px; border-radius: 8px;
+            font-size: 14px; font-weight: 600; cursor: pointer;
+            display: flex; align-items: center; justify-content: center; gap: 8px;
+            transition: transform 0.1s, opacity 0.2s; width: 100%;
+        }
+        .btn:hover { transform: scale(0.98); opacity: 0.9; }
+        .btn-outline { background: transparent; color: var(--text-primary); border: 1px solid var(--border-light); }
+        .btn-outline:hover { background: rgba(255,255,255,0.05); }
+        .btn-danger { background: rgba(239, 68, 68, 0.1); color: var(--error); border: 1px solid rgba(239, 68, 68, 0.3); }
+
+        /* --- Tables --- */
+        .table-wrap { overflow-x: auto; margin-top: 10px; }
+        table { width: 100%; border-collapse: collapse; text-align: left; font-size: 14px; }
+        th { color: var(--text-secondary); font-weight: 500; padding: 12px; border-bottom: 1px solid var(--border-light); white-space: nowrap;}
+        td { padding: 16px 12px; border-bottom: 1px solid var(--border-faint); vertical-align: middle; }
+        .td-actions { display: flex; gap: 8px; }
+        .badge { padding: 4px 8px; border-radius: 6px; font-size: 12px; font-weight: 600; }
+        .badge.active { background: rgba(16, 185, 129, 0.1); color: var(--success); }
+        .badge.inactive { background: rgba(239, 68, 68, 0.1); color: var(--error); }
+        
+        /* --- Modals & Overlays --- */
+        .overlay {
+            position: fixed; inset: 0; background: rgba(0,0,0,0.8);
+            backdrop-filter: blur(10px); z-index: 100;
+            display: flex; align-items: center; justify-content: center;
+            opacity: 0; pointer-events: none; transition: 0.3s;
+        }
+        .overlay.active { opacity: 1; pointer-events: all; }
+        
+        .modal-box {
+            background: var(--bg-surface); border: 1px solid var(--border-light);
+            padding: 32px; border-radius: var(--radius-lg); width: 100%; max-width: 400px;
+            transform: translateY(20px); transition: 0.3s;
+        }
+        .overlay.active .modal-box { transform: translateY(0); }
+        
+        .input-group { margin-bottom: 16px; }
+        .input-group label { display: block; font-size: 12px; color: var(--text-secondary); margin-bottom: 8px; }
+        .input-group input {
+            width: 100%; background: var(--bg-base); border: 1px solid var(--border-light);
+            color: white; padding: 12px; border-radius: 8px; font-family: var(--font-mono);
+        }
+        .input-group input:focus { outline: none; border-color: var(--text-primary); }
+
+        /* --- Toasts --- */
+        .toast-container { position: fixed; bottom: 24px; right: 24px; z-index: 1000; display: flex; flex-direction: column; gap: 10px; }
+        .toast {
+            background: var(--bg-surface); border: 1px solid var(--border-light);
+            color: white; padding: 12px 20px; border-radius: 8px; font-size: 14px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+            animation: slideIn 0.3s ease-out forwards;
+        }
+        @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+        @keyframes fadeUp { to { opacity: 1; transform: translateY(0); } }
+
+        /* Skeletons */
+        .skeleton { color: transparent !important; background: rgba(255,255,255,0.05); border-radius: 4px; animation: pulse 1.5s infinite; }
+        @keyframes pulse { 0% { opacity: 0.6; } 50% { opacity: 1; } 100% { opacity: 0.6; } }
+
+        #qr-wrap canvas { border-radius: 8px; }
+    </style>
+</head>
+<body>
+
+<div class="overlay active" id="auth-overlay">
+    <div class="modal-box">
+        <h2 style="margin-bottom: 24px; display: flex; align-items: center; gap: 8px;">
+            <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+            Admin Access
+        </h2>
+        <div class="input-group">
+            <label>Master Password</label>
+            <input type="password" id="auth-pass" placeholder="Enter password..." onkeydown="if(event.key === 'Enter') tryAuth()">
+        </div>
+        <button class="btn" onclick="tryAuth()">Вход</button>
+    </div>
+</div>
+
+<div class="overlay" id="add-sub-overlay">
+    <div class="modal-box">
+        <h3 style="margin-bottom: 20px;">Новая подписка</h3>
+        <div class="input-group">
+            <label>Название</label>
+            <input type="text" id="sub-name" placeholder="Client #1">
+        </div>
+        <div class="input-group">
+            <label>Лимит трафика (ГБ) - 0 для безлимита</label>
+            <input type="number" id="sub-limit" placeholder="50" value="50">
+        </div>
+        <div class="input-group">
+            <label>Срок действия (дней)</label>
+            <input type="number" id="sub-days" placeholder="30" value="30">
+        </div>
+        <div style="display: flex; gap: 10px; margin-top: 24px;">
+            <button class="btn btn-outline" onclick="closeModal('add-sub-overlay')">Отмена</button>
+            <button class="btn" onclick="saveSub()">Создать</button>
+        </div>
+    </div>
+</div>
+
+<div class="overlay" id="qr-overlay" onclick="closeModal('qr-overlay')">
+    <div class="modal-box" style="text-align: center; width: auto;" onclick="event.stopPropagation()">
+        <h3 style="margin-bottom: 16px;">QR Код</h3>
+        <div id="qr-wrap" style="background: #fff; padding: 16px; border-radius: 12px; display: inline-block;"></div>
+        <p class="stat-label" style="margin-top: 16px; word-break: break-all;" id="qr-url-text"></p>
+    </div>
+</div>
+
+<div class="toast-container" id="toasts"></div>
+
+<div class="layout" id="app-layout">
+    <header>
+        <div class="brand">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <polygon points="12 2 2 7 12 12 22 7 12 2"></polygon>
+                <polyline points="2 17 12 22 22 17"></polyline>
+                <polyline points="2 12 12 17 22 12"></polyline>
+            </svg>
+            Cacut Admin
+        </div>
+        <div style="font-family: var(--font-mono); font-size: 14px; color: var(--text-secondary);" id="last-update">
+            Updating...
+        </div>
+    </header>
+
+    <main class="bento-grid">
+        
+        <div class="card card-status">
+            <div class="card-header">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"></path></svg>
+                Сервер
+            </div>
+            <div class="stat-box">
+                <div class="stat-label">Статус</div>
+                <div class="stat-val skeleton" id="st-health">--</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-label">Пинг</div>
+                <div class="stat-val skeleton" id="st-ping">-- ms</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-label">Uptime</div>
+                <div class="stat-val skeleton" id="st-uptime">--</div>
+            </div>
+            <button class="btn btn-outline" style="margin-top: auto;" onclick="showToast('Команда перезапуска отправлена (Заглушка)', 'info')">Перезапустить</button>
+        </div>
+
+        <div class="card card-hardware">
+            <div class="card-header">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="4" width="16" height="16" rx="2" ry="2"></rect><rect x="9" y="9" width="6" height="6"></rect><line x1="9" y1="1" x2="9" y2="4"></line><line x1="15" y1="1" x2="15" y2="4"></line><line x1="9" y1="20" x2="9" y2="23"></line><line x1="15" y1="20" x2="15" y2="23"></line><line x1="20" y1="9" x2="23" y2="9"></line><line x1="20" y1="14" x2="23" y2="14"></line><line x1="1" y1="9" x2="4" y2="9"></line><line x1="1" y1="14" x2="4" y2="14"></line></svg>
+                Система & Трафик
+            </div>
+            <div class="stat-grid">
+                <div class="stat-box">
+                    <div class="stat-label">CPU Load</div>
+                    <div class="stat-val skeleton" id="hw-cpu">-- %</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-label">RAM Usage</div>
+                    <div class="stat-val skeleton" id="hw-ram">-- MB / -- MB</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-label">Трафик Входящий</div>
+                    <div class="stat-val skeleton" id="hw-net-in">-- GB</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-label">Трафик Исходящий</div>
+                    <div class="stat-val skeleton" id="hw-net-out">-- GB</div>
+                </div>
+                <div class="stat-box" style="grid-column: span 2;">
+                    <div class="stat-label">UUID Узла</div>
+                    <div class="stat-val skeleton" style="font-size: 13px;" id="hw-uuid">------------------------------------</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card card-actions">
+            <div class="card-header">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
+                Действия
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 12px; margin-top: auto;">
+                <button class="btn btn-outline" onclick="openClientPanel()">Личный кабинет</button>
+                <button class="btn btn-outline" onclick="copyMainSub()">Копировать /sub</button>
+                <button class="btn btn-outline" onclick="exportSubs()">Экспорт БД (JSON)</button>
+                <button class="btn" onclick="updateAllData()">Обновить данные</button>
+            </div>
+        </div>
+
+        <div class="card card-subs">
+            <div class="card-header" style="justify-content: space-between;">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+                    Управление подписками
+                </div>
+                <button class="btn" style="width: auto; padding: 6px 12px; font-size: 12px;" onclick="openAddSubModal()">+ Добавить</button>
+            </div>
+            <div class="table-wrap">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Название</th>
+                            <th>Статус</th>
+                            <th>Трафик (Использовано / Лимит)</th>
+                            <th>Истекает</th>
+                            <th>UUID</th>
+                            <th>Действия</th>
+                        </tr>
+                    </thead>
+                    <tbody id="subs-tbody">
+                        </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="card card-logs">
+            <div class="card-header" style="justify-content: space-between;">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
+                    Лог подключений
+                </div>
+                <button class="btn btn-outline" style="width: auto; padding: 6px 12px; font-size: 12px;" onclick="clearLogs()">Очистить</button>
+            </div>
+            <div class="table-wrap">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Время</th>
+                            <th>Действие</th>
+                            <th>IP Адрес</th>
+                            <th>UUID Клиента</th>
+                        </tr>
+                    </thead>
+                    <tbody id="logs-tbody">
+                        <tr><td colspan="4" style="text-align: center; color: var(--text-secondary);">Загрузка...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+    </main>
+</div>
+
+<script>
+    // --- Config & State ---
+    const ADMIN_PASS = "Cocut@Admin2026"; // Пароль для входа
+    const API_BASE = window.location.origin;
+    
+    // Default initial DB - заполняется реальными данными при первом запуске
+    let subsDB = JSON.parse(localStorage.getItem('cacut_subs')) || [];
+
+    // При первом запуске — подтягиваем реальный UUID с сервера
+    async function initDefaultSub() {
+        if (subsDB.length === 0) {
+            try {
+                const res = await fetch(API_BASE + '/info');
+                const data = await res.json();
+                const mainSub = {
+                    id: data.uuid || generateUUID(),
+                    name: "Main Subscription",
+                    limitGB: 100,
+                    usedBytes: 0,
+                    expireTS: null,
+                    active: true
+                };
+                subsDB.push(mainSub);
+                saveToLocal();
+                renderSubs();
+            } catch(e) {
+                // Если /info недоступен — создаём с новым UUID
+                subsDB.push({ id: generateUUID(), name: "Main Subscription", limitGB: 100, usedBytes: 0, expireTS: null, active: true });
+                saveToLocal();
+                renderSubs();
+            }
+        }
+    }
+
+    // --- Core Functions ---
+    function generateUUID() {
+        return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+            let r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
+            return v.toString(16);
+        });
+    }
+
+    function formatGB(bytes) {
+        if(bytes === 0) return "0.00";
+        return (bytes / 1073741824).toFixed(2);
+    }
+
+    function removeSkeleton(id, val, isHTML=false) {
+        const el = document.getElementById(id);
+        if(!el) return;
+        el.classList.remove('skeleton');
+        if(isHTML) el.innerHTML = val;
+        else el.innerText = val;
+    }
+
+    // --- Toasts ---
+    function showToast(msg, type='success') {
+        const container = document.getElementById('toasts');
+        const toast = document.createElement('div');
+        toast.className = 'toast';
+        toast.style.borderLeft = `4px solid var(--${type === 'error' ? 'error' : (type==='info' ? 'accent-blue' : 'success')})`;
+        toast.innerText = msg;
+        container.appendChild(toast);
+        setTimeout(() => { toast.style.opacity = '0'; setTimeout(()=>toast.remove(), 300); }, 3000);
+    }
+
+    // --- Auth Logic ---
+    function tryAuth() {
+        const pass = document.getElementById('auth-pass').value;
+        if(pass === ADMIN_PASS) {
+            sessionStorage.setItem('admin_auth', 'true');
+            document.getElementById('auth-overlay').classList.remove('active');
+            document.getElementById('app-layout').style.display = 'flex';
+            initApp();
+            showToast('Успешный вход');
+        } else {
+            showToast('Неверный пароль', 'error');
+            document.getElementById('auth-pass').value = '';
+        }
+    }
+
+    // --- Data Fetching ---
+    async function fetchAPI(endpoint) {
+        try {
+            const start = performance.now();
+            const res = await fetch(API_BASE + endpoint, { timeout: 3000 });
+            const ping = Math.round(performance.now() - start);
+            if (!res.ok) throw new Error(res.status);
+            
+            const contentType = res.headers.get("content-type");
+            let data = {};
+            if (contentType && contentType.indexOf("application/json") !== -1) {
+                data = await res.json();
+            }
+            return { success: true, ping, data, status: res.status };
+        } catch (e) {
+            return { success: false, error: e.message };
+        }
+    }
+
+    // Block 1 & 2 Updates
+    async function updateServerStats() {
+        // Health
+        const hRes = await fetchAPI('/health');
+        if(hRes.success) {
+            removeSkeleton('st-health', '<span style="color:var(--success)">Online</span>', true);
+            removeSkeleton('st-ping', `${hRes.ping} ms`);
+        } else {
+            removeSkeleton('st-health', '<span style="color:var(--error)">Offline</span>', true);
+            removeSkeleton('st-ping', `ERR`);
+        }
+
+        // Info
+        const iRes = await fetchAPI('/info');
+        if(iRes.success && iRes.data) {
+            removeSkeleton('st-uptime', iRes.data.uptime || 'N/A');
+            removeSkeleton('hw-uuid', iRes.data.uuid || 'N/A');
+        } else {
+            removeSkeleton('st-uptime', 'Endpoint missing');
+            removeSkeleton('hw-uuid', 'Endpoint missing');
+        }
+
+        // Metrics
+        const mRes = await fetchAPI('/metrics');
+        if(mRes.success && mRes.data) {
+            removeSkeleton('hw-cpu', `${mRes.data.cpu_percent || 0} %`);
+            removeSkeleton('hw-ram', `${mRes.data.ram_used_mb || 0} MB / ${mRes.data.ram_total_mb || 0} MB`);
+            removeSkeleton('hw-net-in', `${formatGB(mRes.data.net_in_bytes || 0)} GB`);
+            removeSkeleton('hw-net-out', `${formatGB(mRes.data.net_out_bytes || 0)} GB`);
+        } else {
+            removeSkeleton('hw-cpu', 'N/A');
+            removeSkeleton('hw-ram', 'N/A');
+            removeSkeleton('hw-net-in', 'N/A');
+            removeSkeleton('hw-net-out', 'N/A');
+        }
+
+        document.getElementById('last-update').innerText = `Sync: ${new Date().toLocaleTimeString()}`;
+    }
+
+    // Block 4: Logs
+    async function fetchLogs() {
+        const tbody = document.getElementById('logs-tbody');
+        const lRes = await fetchAPI('/logs');
+        
+        if(lRes.success && Array.isArray(lRes.data)) {
+            tbody.innerHTML = '';
+            if(lRes.data.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; color:var(--text-secondary);">Логи пусты</td></tr>`;
+                return;
+            }
+            lRes.data.slice(0, 20).forEach(log => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td style="font-family:var(--font-mono); font-size: 12px;">${log.time || '-'}</td>
+                    <td><span class="badge ${log.action === 'connect' ? 'active' : 'inactive'}">${log.action || '-'}</span></td>
+                    <td style="font-family:var(--font-mono);">${log.ip || '-'}</td>
+                    <td style="font-family:var(--font-mono); font-size: 12px; color: var(--text-secondary);">${log.uuid || '-'}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        } else {
+            tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; color:var(--text-secondary);">Эндпоинт /logs не реализован или недоступен</td></tr>`;
+        }
+    }
+
+    function clearLogs() {
+        showToast('Очистка логов (только UI)', 'info');
+        document.getElementById('logs-tbody').innerHTML = `<tr><td colspan="4" style="text-align:center; color:var(--text-secondary);">Логи очищены</td></tr>`;
+    }
+
+    // --- Subscriptions Management (Block 3) ---
+    function saveToLocal() {
+        localStorage.setItem('cacut_subs', JSON.stringify(subsDB));
+    }
+
+    function renderSubs() {
+        const tbody = document.getElementById('subs-tbody');
+        tbody.innerHTML = '';
+        
+        subsDB.forEach(sub => {
+            const tr = document.createElement('tr');
+            
+            const limitStr = sub.limitGB === 0 ? '∞' : `${sub.limitGB} GB`;
+            const expireStr = sub.expireTS ? new Date(sub.expireTS).toLocaleDateString() : 'Безлимит';
+            const statusBadge = sub.active 
+                ? `<span class="badge active">Активна</span>` 
+                : `<span class="badge inactive">Отключена</span>`;
+
+            tr.innerHTML = `
+                <td style="font-weight: 500;">${sub.name}</td>
+                <td>${statusBadge}</td>
+                <td style="font-family:var(--font-mono);">${formatGB(sub.usedBytes || 0)} / ${limitStr}</td>
+                <td>${expireStr}</td>
+                <td style="font-family:var(--font-mono); font-size: 12px; color: var(--text-secondary); max-width: 150px; overflow: hidden; text-overflow: ellipsis;">${sub.id}</td>
+                <td class="td-actions">
+                    <button class="btn btn-outline" style="padding: 4px; width:28px;" title="QR Код" onclick="showQR('${sub.id}')">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+                    </button>
+                    <button class="btn btn-outline" style="padding: 4px; width:28px;" title="Копировать" onclick="copySubURL('${sub.id}')">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                    </button>
+                    <button class="btn btn-outline" style="padding: 4px; width:28px;" title="Переключить статус" onclick="toggleSub('${sub.id}')">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18.36 6.64a9 9 0 1 1-12.73 0"></path><line x1="12" y1="2" x2="12" y2="12"></line></svg>
+                    </button>
+                    <button class="btn btn-danger" style="padding: 4px; width:28px;" title="Удалить" onclick="deleteSub('${sub.id}')">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                    </button>
+                </td>
+            `;
+            tbody.appendChild(tr);
+        });
+    }
+
+    function openAddSubModal() { document.getElementById('add-sub-overlay').classList.add('active'); }
+    function closeModal(id) { document.getElementById(id).classList.remove('active'); }
+
+    function saveSub() {
+        const name = document.getElementById('sub-name').value || 'Unnamed';
+        const limit = parseFloat(document.getElementById('sub-limit').value) || 0;
+        const days = parseInt(document.getElementById('sub-days').value) || 0;
+        
+        let expire = null;
+        if(days > 0) expire = Date.now() + (days * 86400000);
+
+        subsDB.push({
+            id: generateUUID(),
+            name: name,
+            limitGB: limit,
+            usedBytes: 0,
+            expireTS: expire,
+            active: true
+        });
+
+        saveToLocal();
+        renderSubs();
+        closeModal('add-sub-overlay');
+        showToast('Подписка создана');
+    }
+
+    function toggleSub(id) {
+        const s = subsDB.find(x => x.id === id);
+        if(s) { s.active = !s.active; saveToLocal(); renderSubs(); showToast(`Статус изменен: ${s.name}`, 'info');}
+    }
+
+    function deleteSub(id) {
+        if(confirm('Точно удалить подписку?')) {
+            subsDB = subsDB.filter(x => x.id !== id);
+            saveToLocal();
+            renderSubs();
+            showToast('Подписка удалена');
+        }
+    }
+
+    function exportSubs() {
+        const data = JSON.stringify(subsDB, null, 2);
+        const blob = new Blob([data], {type: 'application/json'});
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `cacut_subs_${new Date().toISOString().slice(0,10)}.json`;
+        a.click();
+        showToast('БД экспортирована');
+    }
+
+    // --- Quick Actions ---
+    async function copyURL(url) {
+        try {
+            await navigator.clipboard.writeText(url);
+            showToast('Ссылка скопирована');
+        } catch(e) {
+            prompt('Скопируйте вручную:', url);
+        }
+    }
+
+    function copyMainSub() { copyURL(API_BASE + '/sub'); }
+    function openClientPanel() { window.open(API_BASE + '/', '_blank'); }
+    
+    function copySubURL(id) {
+        // Основная подписка всегда /sub, остальные — будущие расширения
+        const url = API_BASE + '/sub';
+        copyURL(url);
+    }
+
+    let qrInst = null;
+    function showQR(id) {
+        const url = API_BASE + '/sub';
+        const wrap = document.getElementById('qr-wrap');
+        wrap.innerHTML = '';
+        qrInst = new QRCode(wrap, { text: url, width: 160, height: 160, colorDark: "#000", colorLight: "#fff" });
+        document.getElementById('qr-url-text').innerText = url;
+        document.getElementById('qr-overlay').classList.add('active');
+    }
+
+    // --- Bootstrap ---
+    function updateAllData() {
+        updateServerStats();
+        fetchLogs();
+    }
+
+    function initApp() {
+        initDefaultSub().then(() => renderSubs());
+        updateAllData();
+        setInterval(updateAllData, 10000); // 10s auto-update
+    }
+
+    // Check Auth on load
+    window.onload = () => {
+        if(sessionStorage.getItem('admin_auth') === 'true') {
+            document.getElementById('auth-overlay').classList.remove('active');
+            document.getElementById('app-layout').style.display = 'flex';
+            initApp();
+        }
+    };
+</script>
+</body>
+</html>
