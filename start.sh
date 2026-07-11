@@ -4,36 +4,35 @@ set -e
 XRAY_BIN="./xray"
 XRAY_VERSION="1.8.24"
 XRAY_URL="https://github.com/XTLS/Xray-core/releases/download/v${XRAY_VERSION}/Xray-linux-64.zip"
+NGROK_VERSION="3.22.1"
+NGROK_URL="https://bin.equinox.io/c/bNyj1mQVY4c/ngrok-v3-stable-linux-amd64.tgz"
 
-# ─── Скачиваем xray если нет ─────────────────────────────────────────────────
+# ─── Скачиваем xray ──────────────────────────────────────────────────────────
 if [ ! -f "$XRAY_BIN" ]; then
     echo "[start.sh] xray не найден, скачиваем v${XRAY_VERSION}..."
-
-    if command -v curl &>/dev/null; then
-        curl -fsSL -o /tmp/xray.zip "$XRAY_URL"
-    elif command -v wget &>/dev/null; then
-        wget -q -O /tmp/xray.zip "$XRAY_URL"
-    else
-        echo "[start.sh] ОШИБКА: нет ни curl ни wget" >&2
-        exit 1
-    fi
-
-    echo "[start.sh] Распаковываем архив..."
+    curl -fsSL -o /tmp/xray.zip "$XRAY_URL"
+    echo "[start.sh] Распаковываем xray..."
     unzip -o /tmp/xray.zip xray -d . 2>/dev/null || {
         mkdir -p /tmp/xray_extract
         unzip -o /tmp/xray.zip -d /tmp/xray_extract
         cp /tmp/xray_extract/xray "$XRAY_BIN" 2>/dev/null || true
     }
-
     rm -f /tmp/xray.zip
-    [ -f "$XRAY_BIN" ] || { echo "[start.sh] ОШИБКА: xray не удалось получить" >&2; exit 1; }
+    [ -f "$XRAY_BIN" ] || { echo "[start.sh] ОШИБКА: xray не найден" >&2; exit 1; }
     echo "[start.sh] xray успешно скачан"
-else
-    echo "[start.sh] xray уже есть, пропускаем загрузку"
 fi
-
 chmod +x "$XRAY_BIN"
 echo "[start.sh] xray: $(./xray version 2>&1 | head -1)"
+
+# ─── Скачиваем ngrok ──────────────────────────────────────────────────────────
+if [ ! -f "/tmp/ngrok" ]; then
+    echo "[start.sh] Скачиваем ngrok..."
+    curl -fsSL -o /tmp/ngrok.tgz "$NGROK_URL"
+    tar -xzf /tmp/ngrok.tgz -C /tmp/
+    rm -f /tmp/ngrok.tgz
+    chmod +x /tmp/ngrok
+    echo "[start.sh] ngrok скачан"
+fi
 
 # ─── UUID ────────────────────────────────────────────────────────────────────
 if [ -z "$UUID" ]; then
@@ -41,19 +40,38 @@ if [ -z "$UUID" ]; then
 fi
 
 # ─── Домен ───────────────────────────────────────────────────────────────────
-# Railway автоматически предоставляет RAILWAY_PUBLIC_DOMAIN
-# Можно также задать вручную переменную DOMAIN
-if [ -n "$DOMAIN" ]; then
+# Если есть NGROK_DOMAIN — используем его как основной домен
+if [ -n "$NGROK_DOMAIN" ]; then
+    export DOMAIN="$NGROK_DOMAIN"
+    echo "[start.sh] Домен через ngrok: $DOMAIN"
+elif [ -n "$DOMAIN" ]; then
     echo "[start.sh] Домен из переменной DOMAIN: $DOMAIN"
 elif [ -n "$RAILWAY_PUBLIC_DOMAIN" ]; then
     echo "[start.sh] Домен из Railway: $RAILWAY_PUBLIC_DOMAIN"
 else
-    echo "[start.sh] ВНИМАНИЕ: домен не определён автоматически. Задай переменную DOMAIN."
+    echo "[start.sh] ВНИМАНИЕ: домен не определён"
 fi
 
-# ─── Запуск gunicorn с gevent worker ─────────────────────────────────────────
-# ВАЖНО: gevent worker нужен для WebSocket TCP hijack!
-PORT="${PORT:-5000}"
+# ─── Запускаем ngrok туннель ─────────────────────────────────────────────────
+if [ -n "$NGROK_AUTHTOKEN" ] && [ -n "$NGROK_DOMAIN" ]; then
+    echo "[start.sh] Запускаем ngrok туннель на домене $NGROK_DOMAIN..."
+    /tmp/ngrok config add-authtoken "$NGROK_AUTHTOKEN" 2>/dev/null || true
+    # Туннель: ngrok проксирует HTTPS на наш gunicorn порт
+    PORT_FOR_NGROK="${PORT:-3000}"
+    /tmp/ngrok http \
+        --domain="$NGROK_DOMAIN" \
+        --log=stdout \
+        --log-level=warn \
+        "$PORT_FOR_NGROK" &
+    NGROK_PID=$!
+    echo "[start.sh] ngrok PID=$NGROK_PID запущен"
+    sleep 3
+else
+    echo "[start.sh] ВНИМАНИЕ: NGROK_AUTHTOKEN или NGROK_DOMAIN не заданы, ngrok не запускается"
+fi
+
+# ─── Запуск gunicorn ─────────────────────────────────────────────────────────
+PORT="${PORT:-3000}"
 WORKERS="${GUNICORN_WORKERS:-1}"
 
 echo "[start.sh] Запускаем gunicorn (gevent) на порту ${PORT}..."
